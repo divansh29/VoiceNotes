@@ -1,0 +1,38 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.voicenotes.app-mergeDebugResources-74:/values-v16/values-v16.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\divan\\.gradle\\caches\\transforms-3\\5035337b963a1b8c1d6b9c2f63cd9cb2\\transformed\\core-1.12.0\\res\\values-v16\\values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "65",
+                        "endOffsets": "116"
+                    }
+                },
+                {
+                    "source": "C:\\Users\\divan\\.gradle\\caches\\transforms-3\\f7c203fbb0d7946d629bafd96707e9c9\\transformed\\appcompat-1.6.1\\res\\values-v16\\values-v16.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "5",
+                        "endColumns": "12",
+                        "endOffsets": "223"
+                    },
+                    "to": {
+                        "startLines": "3",
+                        "startColumns": "4",
+                        "startOffsets": "121",
+                        "endLines": "6",
+                        "endColumns": "12",
+                        "endOffsets": "289"
+                    }
+                }
+            ]
+        }
+    ]
+}

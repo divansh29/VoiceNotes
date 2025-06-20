@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VoiceNotes</string>
+    <string name="record_button">Record</string>
+    <string name="stop_recording">Stop Recording</string>
+    <string name="play_button">Play</string>
+    <string name="pause_button">Pause</string>
+    <string name="delete_button">Delete</string>
+    <string name="share_button">Share</string>
+    <string name="recording_title">Recording Title</string>
+    <string name="recording_summary">Summary</string>
+    <string name="key_points">Key Points</string>
+    <string name="no_recordings">No recordings yet</string>
+    <string name="permission_required">Audio recording permission is required</string>
+    <string name="grant_permission">Grant Permission</string>
+    <string name="processing">Processing...</string>
+    <string name="error_recording">Error during recording</string>
+    <string name="error_playback">Error during playback</string>
+    <string name="generating_summary">Generating summary...</string>
+</resources>
