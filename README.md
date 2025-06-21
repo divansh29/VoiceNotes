@@ -9,7 +9,7 @@ A modern Android app built with Kotlin that records voice memos and automaticall
 - 📱 **Modern UI** - Clean, intuitive interface built with Jetpack Compose
 - 💾 **Local Storage** - All recordings stored locally with Room database
 - ▶️ **Playback Controls** - Play, pause, and manage your recordings
-- 🔒 **Privacy-First** - No cloud storage, all data stays on your device
+- 🔒 **Privacy-First** - All data stays on your device
 
 ## Technical Stack
 
