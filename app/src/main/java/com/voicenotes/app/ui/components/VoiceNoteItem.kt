@@ -6,6 +6,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.voicenotes.app.data.VoiceNote
 import java.text.SimpleDateFormat
 import java.util.*
@@ -25,6 +28,8 @@ fun VoiceNoteItem(
     onPlayClick: () -> Unit,
     onPauseClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onReadTranscriptClick: () -> Unit = {},
+    onReadSummaryClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -115,15 +120,57 @@ fun VoiceNoteItem(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(if (isPlaying) "Pause" else "Play")
                 }
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
-                
+
                 // Duration
                 Text(
                     text = formatDuration(voiceNote.duration),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            // TTS Controls Row
+            if (!voiceNote.transcript.isNullOrBlank() || !voiceNote.summary.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Read Transcript Button
+                    if (!voiceNote.transcript.isNullOrBlank()) {
+                        OutlinedButton(
+                            onClick = { onReadTranscriptClick() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.RecordVoiceOver,
+                                contentDescription = "Read Transcript",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Read Text", fontSize = 12.sp)
+                        }
+                    }
+
+                    // Read Summary Button
+                    if (!voiceNote.summary.isNullOrBlank()) {
+                        OutlinedButton(
+                            onClick = { onReadSummaryClick() },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Summarize,
+                                contentDescription = "Read Summary",
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Read Summary", fontSize = 12.sp)
+                        }
+                    }
+                }
             }
             
             // Processing indicator

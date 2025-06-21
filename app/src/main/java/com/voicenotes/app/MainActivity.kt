@@ -133,6 +133,8 @@ fun VoiceNotesApp(
     val uiState by viewModel.uiState.collectAsState()
     val voiceNotes by viewModel.voiceNotes.collectAsState()
     val isPlaying by viewModel.isPlaying.collectAsState()
+    val isTTSSpeaking by viewModel.isTTSSpeaking.collectAsState()
+    val currentTTSText by viewModel.currentTTSText.collectAsState()
 
     var currentlyPlayingId by remember { mutableStateOf<Long?>(null) }
     var currentScreen by remember { mutableStateOf("main") }
@@ -176,6 +178,8 @@ fun VoiceNotesApp(
                 voiceNotes = voiceNotes,
                 isPlaying = isPlaying,
                 currentlyPlayingId = currentlyPlayingId,
+                isTTSSpeaking = isTTSSpeaking,
+                currentTTSText = currentTTSText,
                 onStartRecording = {
                     viewModel.startRecording()
                 },
@@ -211,13 +215,46 @@ fun VoiceNotesApp(
                 onOpenDrive = {
                     showDriveDialog = true
                 },
-                onSpeechRecognition = onSpeechRecognition
+                onSpeechRecognition = onSpeechRecognition,
+                onReadTranscript = { voiceNote ->
+                    viewModel.readTranscript(voiceNote)
+                },
+                onReadSummary = { voiceNote ->
+                    viewModel.readSummary(voiceNote)
+                },
+                onStopTTS = {
+                    viewModel.stopTTS()
+                },
+                onOpenTTSSettings = {
+                    currentScreen = "tts_settings"
+                },
+                onSpeakCustomText = { text ->
+                    viewModel.speakText(text)
+                }
                 )
 
                 "analytics" -> {
                     com.voicenotes.app.ui.screens.AnalyticsScreen(
                         voiceNotes = voiceNotes,
                         onBackClick = { currentScreen = "main" }
+                    )
+                }
+
+                "tts_settings" -> {
+                    com.voicenotes.app.ui.screens.BasicTTSSettingsScreen(
+                        currentSettings = com.voicenotes.app.audio.TTSSettings(), // Default settings for now
+                        isSpeaking = isTTSSpeaking,
+                        onBackClick = { currentScreen = "main" },
+                        onSaveSettings = { settings ->
+                            // TODO: Save TTS settings
+                            currentScreen = "main"
+                        },
+                        onTestTTS = { text ->
+                            viewModel.speakText(text)
+                        },
+                        onStopTTS = {
+                            viewModel.stopTTS()
+                        }
                     )
                 }
 

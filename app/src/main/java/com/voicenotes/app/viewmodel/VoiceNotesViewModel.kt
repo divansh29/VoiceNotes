@@ -17,6 +17,7 @@ import com.voicenotes.app.cloud.DriveFile
 import com.voicenotes.app.cloud.UploadResult
 import com.voicenotes.app.audio.TTSHelper
 import com.voicenotes.app.audio.SimpleTTSHelper
+import com.voicenotes.app.audio.EnhancedTTSService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
@@ -38,6 +39,7 @@ class VoiceNotesViewModel(application: Application) : AndroidViewModel(applicati
     private val namingManager: NamingManager
     private val fileProcessor: FileProcessor
     private val googleDriveService: GoogleDriveService
+    private val enhancedTTSService: EnhancedTTSService
     
     init {
         val database = VoiceNoteDatabase.getDatabase(application)
@@ -48,6 +50,12 @@ class VoiceNotesViewModel(application: Application) : AndroidViewModel(applicati
         namingManager = NamingManager(application)
         fileProcessor = FileProcessor(application)
         googleDriveService = GoogleDriveService(application)
+        enhancedTTSService = EnhancedTTSService(application)
+
+        // Initialize TTS service
+        viewModelScope.launch {
+            enhancedTTSService.initialize()
+        }
     }
     
     // UI State
@@ -66,6 +74,10 @@ class VoiceNotesViewModel(application: Application) : AndroidViewModel(applicati
     val isPlaying = audioPlayer.isPlaying
     val currentPosition = audioPlayer.currentPosition
     val duration = audioPlayer.duration
+
+    // TTS state
+    val isTTSSpeaking = enhancedTTSService.isSpeaking
+    val currentTTSText = enhancedTTSService.currentText
     
     fun startRecording() {
         viewModelScope.launch {
@@ -581,9 +593,62 @@ class VoiceNotesViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    // TTS Methods
+
+    /**
+     * Read voice note transcript aloud
+     */
+    fun readTranscript(voiceNote: VoiceNote) {
+        if (!voiceNote.transcript.isNullOrBlank()) {
+            enhancedTTSService.readTranscript(voiceNote.transcript)
+        }
+    }
+
+    /**
+     * Read voice note summary aloud
+     */
+    fun readSummary(voiceNote: VoiceNote) {
+        if (!voiceNote.summary.isNullOrBlank()) {
+            enhancedTTSService.readSummary(voiceNote.summary)
+        }
+    }
+
+    /**
+     * Read voice note keywords aloud
+     */
+    fun readKeywords(voiceNote: VoiceNote) {
+        if (!voiceNote.keyPoints.isNullOrEmpty()) {
+            enhancedTTSService.readKeywords(voiceNote.keyPoints)
+        }
+    }
+
+    /**
+     * Stop TTS speaking
+     */
+    fun stopTTS() {
+        enhancedTTSService.stopSpeaking()
+    }
+
+    /**
+     * Speak custom text
+     */
+    fun speakText(text: String) {
+        Log.d("VoiceNotesViewModel", "speakText called with: ${text.take(50)}...")
+        Log.d("VoiceNotesViewModel", "TTS initialized: ${enhancedTTSService.isAvailable()}")
+        enhancedTTSService.speakText(text)
+    }
+
+    /**
+     * Check if TTS is available
+     */
+    fun isTTSAvailable(): Boolean {
+        return enhancedTTSService.isAvailable()
+    }
+
     override fun onCleared() {
         super.onCleared()
         audioPlayer.stopAudio()
+        enhancedTTSService.shutdown()
     }
 }
 
