@@ -253,24 +253,164 @@ class AIService(private val context: Context) {
     }
 
     private fun generateKeyPoints(transcript: String): List<String> {
-        // Simple key points extraction
-        val words = transcript.split(" ")
+        // Enhanced key points extraction using contextual analysis
         val keyPoints = mutableListOf<String>()
+        val lowerTranscript = transcript.lowercase()
 
-        if (transcript.contains("important", ignoreCase = true)) {
-            keyPoints.add("Contains important information")
-        }
-        if (transcript.contains("task", ignoreCase = true) || transcript.contains("todo", ignoreCase = true)) {
-            keyPoints.add("Includes tasks or action items")
-        }
-        if (transcript.contains("meeting", ignoreCase = true)) {
-            keyPoints.add("Meeting-related content")
-        }
-        if (words.size > 50) {
-            keyPoints.add("Detailed discussion")
+        // Extract specific, meaningful keywords
+        val contextualKeywords = extractContextualKeywords(transcript)
+        val actionKeywords = extractActionKeywords(transcript)
+        val entityKeywords = extractEntityKeywords(transcript)
+
+        // Prioritize specific keywords over generic ones
+        keyPoints.addAll(contextualKeywords.take(3))
+        keyPoints.addAll(actionKeywords.take(2))
+        keyPoints.addAll(entityKeywords.take(3))
+
+        // Add content-based keywords if we have room
+        if (keyPoints.size < 5) {
+            val contentKeywords = extractContentKeywords(transcript)
+            keyPoints.addAll(contentKeywords.take(5 - keyPoints.size))
         }
 
-        return keyPoints.ifEmpty { listOf("General voice note") }
+        return keyPoints.distinct().take(8).ifEmpty { listOf("Voice note") }
+    }
+
+    /**
+     * Extract contextual keywords from transcript
+     */
+    private fun extractContextualKeywords(transcript: String): List<String> {
+        val keywords = mutableListOf<String>()
+        val lowerText = transcript.lowercase()
+
+        // Meeting/work related
+        when {
+            lowerText.contains("meeting") -> keywords.add("meeting")
+            lowerText.contains("conference") -> keywords.add("conference")
+            lowerText.contains("call") -> keywords.add("call")
+            lowerText.contains("project") -> keywords.add("project")
+            lowerText.contains("deadline") -> keywords.add("deadline")
+            lowerText.contains("team") -> keywords.add("team")
+        }
+
+        // Personal tasks
+        when {
+            lowerText.contains("shopping") || lowerText.contains("buy") -> keywords.add("shopping")
+            lowerText.contains("appointment") -> keywords.add("appointment")
+            lowerText.contains("doctor") -> keywords.add("doctor")
+            lowerText.contains("dentist") -> keywords.add("dentist")
+        }
+
+        // Time-related
+        when {
+            lowerText.contains("today") -> keywords.add("today")
+            lowerText.contains("tomorrow") -> keywords.add("tomorrow")
+            lowerText.contains("weekend") -> keywords.add("weekend")
+            lowerText.contains("monday") -> keywords.add("monday")
+            lowerText.contains("tuesday") -> keywords.add("tuesday")
+            lowerText.contains("wednesday") -> keywords.add("wednesday")
+            lowerText.contains("thursday") -> keywords.add("thursday")
+            lowerText.contains("friday") -> keywords.add("friday")
+        }
+
+        return keywords
+    }
+
+    /**
+     * Extract action-oriented keywords
+     */
+    private fun extractActionKeywords(transcript: String): List<String> {
+        val keywords = mutableListOf<String>()
+        val lowerText = transcript.lowercase()
+
+        val actionMap = mapOf(
+            "call" to listOf("call", "phone", "ring"),
+            "email" to listOf("email", "send", "message"),
+            "buy" to listOf("buy", "purchase", "get"),
+            "schedule" to listOf("schedule", "book", "arrange"),
+            "visit" to listOf("visit", "go to", "stop by"),
+            "finish" to listOf("finish", "complete", "done"),
+            "prepare" to listOf("prepare", "get ready", "set up"),
+            "review" to listOf("review", "check", "look at")
+        )
+
+        actionMap.forEach { (action, patterns) ->
+            if (patterns.any { pattern -> lowerText.contains(pattern) }) {
+                keywords.add(action)
+            }
+        }
+
+        return keywords
+    }
+
+    /**
+     * Extract entity keywords (names, places, specific items)
+     */
+    private fun extractEntityKeywords(transcript: String): List<String> {
+        val keywords = mutableListOf<String>()
+        val lowerText = transcript.lowercase()
+
+        // Common entities
+        val entities = listOf(
+            "john", "sarah", "mike", "lisa", "david", "anna", "chris", "maria",
+            "milk", "bread", "eggs", "coffee", "groceries", "medicine",
+            "bank", "store", "office", "home", "hospital", "school",
+            "morning", "afternoon", "evening", "lunch", "dinner"
+        )
+
+        entities.forEach { entity ->
+            if (lowerText.contains(entity)) {
+                keywords.add(entity)
+            }
+        }
+
+        return keywords
+    }
+
+    /**
+     * Extract content-based keywords
+     */
+    private fun extractContentKeywords(transcript: String): List<String> {
+        val keywords = mutableListOf<String>()
+        val words = transcript.lowercase().split("\\s+".toRegex())
+
+        // Filter meaningful words
+        val meaningfulWords = words.filter { word ->
+            word.length > 3 &&
+            !isStopWord(word) &&
+            !isCommonWord(word)
+        }
+
+        // Count frequency and return top words
+        val wordCounts = meaningfulWords.groupingBy { it }.eachCount()
+        return wordCounts.entries
+            .sortedByDescending { it.value }
+            .take(5)
+            .map { it.key }
+    }
+
+    /**
+     * Check if word is a stop word
+     */
+    private fun isStopWord(word: String): Boolean {
+        val stopWords = setOf(
+            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with",
+            "by", "from", "up", "about", "into", "through", "during", "before", "after",
+            "this", "that", "these", "those", "i", "you", "he", "she", "it", "we", "they"
+        )
+        return stopWords.contains(word)
+    }
+
+    /**
+     * Check if word is too common to be meaningful
+     */
+    private fun isCommonWord(word: String): Boolean {
+        val commonWords = setOf(
+            "said", "says", "going", "really", "think", "know", "like", "just",
+            "want", "need", "make", "take", "come", "good", "great", "nice",
+            "thing", "things", "stuff", "something", "anything", "everything"
+        )
+        return commonWords.contains(word)
     }
 
     private fun extractActionItems(transcript: String): List<ActionItem> {

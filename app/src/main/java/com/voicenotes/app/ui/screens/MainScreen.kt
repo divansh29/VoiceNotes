@@ -8,9 +8,14 @@ import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import com.voicenotes.app.MainActivity
+import com.voicenotes.app.ui.components.SpeechRecognitionCard
+import com.voicenotes.app.ui.components.SimpleSpeechCard
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,6 +42,7 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit = {},
     onUploadFile: () -> Unit = {},
     onOpenDrive: () -> Unit = {},
+    onSpeechRecognition: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -67,6 +73,12 @@ fun MainScreen(
                     Icon(
                         imageVector = Icons.Default.Analytics,
                         contentDescription = "Analytics"
+                    )
+                }
+                IconButton(onClick = onSpeechRecognition) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Speech to Text"
                     )
                 }
                 IconButton(onClick = onNavigateToSettings) {
@@ -135,9 +147,14 @@ fun MainScreen(
                         }
                     }
                 }
-                
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Speech Recognition section
+                SimpleSpeechCard()
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 // Voice notes list
                 if (voiceNotes.isEmpty()) {
                     // Empty state

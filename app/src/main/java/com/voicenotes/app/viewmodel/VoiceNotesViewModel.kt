@@ -15,6 +15,11 @@ import com.voicenotes.app.audio.FileProcessor
 import com.voicenotes.app.cloud.GoogleDriveService
 import com.voicenotes.app.cloud.DriveFile
 import com.voicenotes.app.cloud.UploadResult
+import com.voicenotes.app.audio.TTSHelper
+import com.voicenotes.app.audio.SimpleTTSHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import android.util.Log
 import android.net.Uri
 import android.Manifest
 import android.content.pm.PackageManager
@@ -251,6 +256,167 @@ class VoiceNotesViewModel(application: Application) : AndroidViewModel(applicati
     
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    /**
+     * Handle speech recognition result with audio synthesis and AI analysis
+     */
+    fun handleSpeechRecognitionResult(transcript: String) {
+        viewModelScope.launch {
+            try {
+                _uiState.value = _uiState.value.copy(isProcessing = true)
+
+                // Create audio file from text using TTS
+                val audioFileName = "speech_${System.currentTimeMillis()}.wav"
+                val audioFilePath = getApplication<Application>().filesDir.absolutePath + "/" + audioFileName
+
+                // Generate audio from text using Text-to-Speech
+                val audioGenerated = generateAudioFromText(transcript, audioFilePath)
+
+                if (audioGenerated) {
+                    // Process with AI to extract keywords and summary
+                    val aiResult = aiService.generateSummary(transcript, audioFilePath)
+
+                    // Extract keywords (first 5 most important)
+                    val keywords = aiResult.keyPoints.take(5)
+
+                    // Generate 1-line summary using enhanced AI
+                    val oneLinerSummary = if (aiResult.summary.isNotEmpty()) {
+                        generateOneLinerSummary(transcript, aiResult.summary)
+                    } else {
+                        // Fallback to simple truncation
+                        if (transcript.length <= 80) transcript else transcript.take(77) + "..."
+                    }
+
+                    // Create voice note entry
+                    val audioFile = java.io.File(audioFilePath)
+                    val voiceNote = VoiceNote(
+                        title = "Speech: ${oneLinerSummary.take(30)}...",
+                        filePath = audioFilePath,
+                        duration = estimateAudioDuration(transcript),
+                        fileSize = audioFile.length(),
+                        createdAt = Date(),
+                        transcript = transcript,
+                        summary = oneLinerSummary,
+                        keyPoints = keywords,
+                        isProcessing = false
+                    )
+
+                    // Save to database
+                    repository.insertVoiceNote(voiceNote)
+
+                    _uiState.value = _uiState.value.copy(
+                        isProcessing = false,
+                        errorMessage = null
+                    )
+
+                    // Auto-play the generated audio
+                    playAudio(voiceNote)
+
+                } else {
+                    // Fallback: create voice note without audio
+                    createTextOnlyVoiceNote(transcript)
+                }
+
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    errorMessage = "Failed to process speech: ${e.message}",
+                    isProcessing = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Generate audio from text using Android's Text-to-Speech
+     */
+    private suspend fun generateAudioFromText(text: String, outputPath: String): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                // Use simplified TTS helper
+                val ttsHelper = SimpleTTSHelper(getApplication())
+                ttsHelper.createAudioFromText(text, outputPath)
+            } catch (e: Exception) {
+                Log.e("TTS", "Failed to generate audio from text", e)
+                false
+            }
+        }
+    }
+
+    /**
+     * Generate a concise one-line summary
+     */
+    private fun generateOneLinerSummary(transcript: String, aiSummary: String): String {
+        return when {
+            transcript.length <= 50 -> transcript
+            aiSummary.isNotEmpty() -> {
+                // Take first sentence of AI summary, max 80 characters
+                val firstSentence = aiSummary.split(".")[0].trim()
+                if (firstSentence.length <= 80) firstSentence else firstSentence.take(77) + "..."
+            }
+            else -> {
+                // Fallback: first 80 characters of transcript
+                if (transcript.length <= 80) transcript else transcript.take(77) + "..."
+            }
+        }
+    }
+
+    /**
+     * Estimate audio duration based on text length (average speaking speed)
+     */
+    private fun estimateAudioDuration(text: String): Long {
+        // Average speaking speed: ~150 words per minute = 2.5 words per second
+        val wordCount = text.split(" ").size
+        val durationSeconds = (wordCount / 2.5).toLong()
+        return durationSeconds * 1000 // Convert to milliseconds
+    }
+
+    /**
+     * Create voice note without audio (fallback)
+     */
+    private suspend fun createTextOnlyVoiceNote(transcript: String) {
+        try {
+            // Process with AI
+            val aiResult = aiService.generateSummary(transcript, "")
+            val keywords = aiResult.keyPoints.take(5)
+            val oneLinerSummary = generateOneLinerSummary(transcript, aiResult.summary)
+
+            // Create text-only voice note
+            val voiceNote = VoiceNote(
+                title = "Speech: ${oneLinerSummary.take(30)}...",
+                filePath = "", // No audio file
+                duration = estimateAudioDuration(transcript),
+                fileSize = 0L,
+                createdAt = Date(),
+                transcript = transcript,
+                summary = oneLinerSummary,
+                keyPoints = keywords,
+                isProcessing = false
+            )
+
+            repository.insertVoiceNote(voiceNote)
+
+            _uiState.value = _uiState.value.copy(
+                isProcessing = false,
+                errorMessage = null
+            )
+
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Failed to create voice note: ${e.message}",
+                isProcessing = false
+            )
+        }
+    }
+
+    /**
+     * Handle speech recognition error
+     */
+    fun handleSpeechRecognitionError(errorMessage: String) {
+        _uiState.value = _uiState.value.copy(
+            errorMessage = "Speech recognition failed: $errorMessage",
+            isRecording = false
+        )
     }
 
     fun processUploadedFile(uri: Uri, fileName: String) {

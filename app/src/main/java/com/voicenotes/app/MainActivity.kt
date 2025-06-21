@@ -24,8 +24,13 @@ import com.voicenotes.app.ui.components.FileUploadDialog
 import com.voicenotes.app.ui.theme.VoiceNotesTheme
 import com.voicenotes.app.viewmodel.VoiceNotesViewModel
 import com.voicenotes.app.security.SecurityManager
+import com.voicenotes.app.ai.AndroidSTTService
+import com.voicenotes.app.ai.AndroidSTTResult
+import com.voicenotes.app.ai.SimpleSTTService
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
+import android.content.Intent
+import android.util.Log
 
 class MainActivity : ComponentActivity() {
 
@@ -33,11 +38,27 @@ class MainActivity : ComponentActivity() {
     private var hasAudioPermission by mutableStateOf(false)
     private var isAuthenticated by mutableStateOf(false)
     private lateinit var securityManager: SecurityManager
+    private lateinit var androidSTTService: AndroidSTTService
+    private lateinit var simpleSTTService: SimpleSTTService
     
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasAudioPermission = isGranted
+    }
+
+    // Speech recognition launcher - simplified version
+    private val speechRecognitionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val transcript = simpleSTTService.handleResult(result.resultCode, result.data)
+        if (transcript != null) {
+            Log.d("STT", "Speech recognized: $transcript")
+            viewModel.handleSpeechRecognitionResult(transcript)
+        } else {
+            Log.e("STT", "Speech recognition failed or cancelled")
+            viewModel.handleSpeechRecognitionError("Speech recognition failed")
+        }
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +66,10 @@ class MainActivity : ComponentActivity() {
 
         // Initialize security manager
         securityManager = SecurityManager(this)
+
+        // Initialize Android STT service
+        androidSTTService = AndroidSTTService(this)
+        simpleSTTService = SimpleSTTService(this)
 
         // Always require authentication on app start
         // User is never authenticated initially - must always enter PIN
@@ -72,10 +97,25 @@ class MainActivity : ComponentActivity() {
                         },
                         onAuthenticated = {
                             isAuthenticated = true
+                        },
+                        onSpeechRecognition = {
+                            startSpeechRecognition()
                         }
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Start Android's built-in speech recognition - simplified version
+     */
+    fun startSpeechRecognition() {
+        if (simpleSTTService.isAvailable()) {
+            val intent = simpleSTTService.createSpeechIntent()
+            speechRecognitionLauncher.launch(intent)
+        } else {
+            Log.e("STT", "Speech recognition not available on this device")
         }
     }
 }
@@ -87,7 +127,8 @@ fun VoiceNotesApp(
     isAuthenticated: Boolean,
     securityManager: SecurityManager,
     onRequestPermission: () -> Unit,
-    onAuthenticated: () -> Unit
+    onAuthenticated: () -> Unit,
+    onSpeechRecognition: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val voiceNotes by viewModel.voiceNotes.collectAsState()
@@ -169,7 +210,8 @@ fun VoiceNotesApp(
                 },
                 onOpenDrive = {
                     showDriveDialog = true
-                }
+                },
+                onSpeechRecognition = onSpeechRecognition
                 )
 
                 "analytics" -> {
